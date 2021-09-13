@@ -1,7 +1,7 @@
 package ru.standard1c.format;
 
 import lombok.RequiredArgsConstructor;
-import ru.standard1c.AlternativeRepresentation;
+import ru.standard1c.util.AlternativeRepresentation;
 
 /**
  * @author Maxim Tereshchenko

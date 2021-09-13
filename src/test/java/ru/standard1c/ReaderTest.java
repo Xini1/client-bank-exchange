@@ -6,15 +6,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import ru.standard1c.exception.NoEndOfSection;
 import ru.standard1c.exception.NoStartOfSection;
-import ru.standard1c.reader.AttributeSource;
+import ru.standard1c.exception.UnknownAttribute;
+import ru.standard1c.reader.source.AttributeSource;
+import ru.standard1c.reader.DefaultReader;
 import ru.standard1c.reader.Reader;
-import ru.standard1c.reader.ScannerAttributeSource;
+import ru.standard1c.reader.source.ScannerAttributeSource;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Scanner;
 
 /**
@@ -22,7 +25,7 @@ import java.util.Scanner;
  */
 class ReaderTest {
 
-    private final Reader<TestCaptor> reader1C = new Reader<>(
+    private final Reader<TestCaptor, TestCaptor> reader = DefaultReader.from(
             "OpenSection",
             "CloseSection",
             TestCaptor::new
@@ -30,26 +33,26 @@ class ReaderTest {
 
     @Test
     void givenSectionWithoutName_thenNameIsNull() {
-        assertThat(reader1C.read(attributeSource("OpenSection", "CloseSection")))
+        assertThat(reader.read(attributeSource("OpenSection", "CloseSection")))
                 .isEqualTo(new TestCaptor(null));
     }
 
     @Test
     void givenSectionWithName_thenNameIsExpected() {
-        assertThat(reader1C.read(attributeSource("OpenSection=expected", "CloseSection")))
+        assertThat(reader.read(attributeSource("OpenSection=expected", "CloseSection")))
                 .isEqualTo(new TestCaptor("expected"));
     }
 
     @Test
     void givenSectionWithEmptyName_thenNameIsEmpty() {
-        assertThat(reader1C.read(attributeSource("OpenSection=", "CloseSection")))
+        assertThat(reader.read(attributeSource("OpenSection=", "CloseSection")))
                 .isEqualTo(new TestCaptor(""));
     }
 
     @Test
     void givenAttributesBeforeSection_thenTheyShouldBeSkipped() {
         assertThat(
-                reader1C.read(
+                reader.read(
                         attributeSource(
                                 "ShouldBeSkipped=whatever",
                                 "OpenSection=expected",
@@ -64,7 +67,7 @@ class ReaderTest {
     void givenNoAttributes_thenNoStartOfSectionException() {
         var attributeSource = attributeSource("");
 
-        assertThatThrownBy(() -> reader1C.read(attributeSource))
+        assertThatThrownBy(() -> reader.read(attributeSource))
                 .isInstanceOf(NoStartOfSection.class)
                 .hasMessage("Could not find start of section attribute key 'OpenSection'");
     }
@@ -73,7 +76,7 @@ class ReaderTest {
     void givenNoEndOfSectionAttribute_thenNoEndOfSectionException() {
         var attributeSource = attributeSource("OpenSection");
 
-        assertThatThrownBy(() -> reader1C.read(attributeSource))
+        assertThatThrownBy(() -> reader.read(attributeSource))
                 .isInstanceOf(NoEndOfSection.class)
                 .hasMessage("Could not find end of section attribute key 'CloseSection'");
     }
@@ -81,7 +84,7 @@ class ReaderTest {
     @Test
     void givenAttributeWithKey_thenHandleIt() {
         assertThat(
-                reader1C.onAttribute("Key", (testCaptor, value) -> testCaptor.put("Key", value))
+                reader.onAttribute("Key", (testCaptor, value) -> testCaptor.put("Key", value))
                         .read(
                                 attributeSource(
                                         "OpenSection=expected",
@@ -99,7 +102,7 @@ class ReaderTest {
     @Test
     void givenSeveralAttributes_thenHandleOnlySpecified() {
         assertThat(
-                reader1C.onAttribute("Key1", (testCaptor, value) -> testCaptor.put("Key1", value))
+                reader.onAttribute("Key1", (testCaptor, value) -> testCaptor.put("Key1", value))
                         .read(
                                 attributeSource(
                                         "OpenSection=expected",
@@ -118,7 +121,7 @@ class ReaderTest {
     @Test
     void givenSeveralAttributes_thenHandleAll() {
         assertThat(
-                reader1C.onAttribute("Key1", (testCaptor, value) -> testCaptor.put("Key1", value))
+                reader.onAttribute("Key1", (testCaptor, value) -> testCaptor.put("Key1", value))
                         .onAttribute("Key2", (testCaptor, value) -> testCaptor.put("Key2", value))
                         .read(
                                 attributeSource(
@@ -139,7 +142,7 @@ class ReaderTest {
     @Test
     void givenAttributesAfterEndOfSection_thenTheyShouldBeSkipped() {
         assertThat(
-                reader1C.read(
+                reader.read(
                         attributeSource(
                                 "OpenSection=expected",
                                 "CloseSection",
@@ -153,8 +156,8 @@ class ReaderTest {
     @Test
     void givenNestedSection_thenHandleIt() {
         assertThat(
-                reader1C.onSection(
-                                new Reader<>(
+                reader.onSection(
+                                DefaultReader.from(
                                         "OpenNestedSection",
                                         "CloseNestedSection",
                                         TestCaptor::new
@@ -179,12 +182,12 @@ class ReaderTest {
     @Test
     void givenNestedSectionWithAttribute_thenHandleNestedAttribute() {
         assertThat(
-                reader1C.onSection(
-                                new Reader<>(
-                                        "OpenNestedSection",
-                                        "CloseNestedSection",
-                                        TestCaptor::new
-                                )
+                reader.onSection(
+                                DefaultReader.from(
+                                                "OpenNestedSection",
+                                                "CloseNestedSection",
+                                                TestCaptor::new
+                                        )
                                         .onAttribute("Key", (testCaptor, value) -> testCaptor.put("Key", value)),
                                 TestCaptor::addNestedSection
                         )
@@ -208,6 +211,55 @@ class ReaderTest {
                                                 .put("Key", "value")
                                 )
                 );
+    }
+
+    @Test
+    void givenFinisher_thenReturnExpectedObject() {
+        assertThat(
+                reader.onEndOfSection(Optional::of)
+                        .read(
+                                attributeSource(
+                                        "OpenSection",
+                                        "CloseSection"
+                                )
+                        )
+        )
+                .isEqualTo(Optional.of(new TestCaptor(null)));
+    }
+
+    @Test
+    void givenAnyAttribute_thenHandleAll() {
+        assertThat(
+                reader.onAnyOtherAttribute(
+                                (testCaptor, attribute) -> testCaptor.put(
+                                        attribute.key(),
+                                        attribute.value()
+                                )
+                        )
+                        .read(
+                                attributeSource(
+                                        "OpenSection",
+                                        "Key1=value1",
+                                        "Key2=value2",
+                                        "CloseSection"
+                                )
+                        )
+        )
+                .isEqualTo(
+                        new TestCaptor(null)
+                                .put("Key1", "value1")
+                                .put("Key2", "value2")
+                );
+    }
+
+    @Test
+    void givenFailOnUnknownAttribute_thenUnknownAttributeException() {
+        var reader = this.reader.failOnUnknownAttribute();
+        var attributeSource = attributeSource("OpenSection", "Key=value", "CloseSection");
+
+        assertThatThrownBy(() -> reader.read(attributeSource))
+                .isInstanceOf(UnknownAttribute.class)
+                .hasMessage("Unknown attribute: Key=value");
     }
 
     private AttributeSource attributeSource(String... strings) {
@@ -249,6 +301,15 @@ class ReaderTest {
             return Objects.equals(name, that.name) &&
                     Objects.equals(attributes, that.attributes) &&
                     Objects.equals(nestedSections, that.nestedSections);
+        }
+
+        @Override
+        public String toString() {
+            return "TestCaptor{" +
+                    "name='" + name + '\'' +
+                    ", attributes=" + attributes +
+                    ", nestedSections=" + nestedSections +
+                    '}';
         }
     }
 }
