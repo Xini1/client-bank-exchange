@@ -1,13 +1,13 @@
 package ru.standard1c.reader.source;
 
-import java.util.Optional;
-
 /**
+ * Абстракция источника {@link Attribute} с возможностью итерации.
+ *
  * @author Maxim Tereshchenko
  */
 public interface AttributeSource {
 
-    Optional<Attribute> next();
+    Attribute next();
 
     boolean hasNext();
 }

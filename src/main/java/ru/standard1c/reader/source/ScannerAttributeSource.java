@@ -2,10 +2,11 @@ package ru.standard1c.reader.source;
 
 import lombok.RequiredArgsConstructor;
 
-import java.util.Optional;
 import java.util.Scanner;
 
 /**
+ * Реализация {@link AttributeSource} на основе {@link Scanner}.
+ *
  * @author Maxim Tereshchenko
  */
 @RequiredArgsConstructor
@@ -14,12 +15,12 @@ public class ScannerAttributeSource implements AttributeSource {
     private final Scanner scanner;
 
     @Override
-    public Optional<Attribute> next() {
+    public Attribute next() {
         if (!hasNext()) {
-            return Optional.empty();
+            return null;
         }
 
-        return Optional.of(Attribute.from(scanner.nextLine()));
+        return Attribute.from(scanner.nextLine());
     }
 
     @Override

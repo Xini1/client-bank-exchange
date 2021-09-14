@@ -3,6 +3,9 @@ package ru.standard1c.util;
 import java.util.Arrays;
 
 /**
+ * Интерфейс для пометки перечисления, у которых есть
+ * альтернативное представление (например, на русском языке).
+ *
  * @author Maxim Tereshchenko
  */
 public interface AlternativeRepresentation {

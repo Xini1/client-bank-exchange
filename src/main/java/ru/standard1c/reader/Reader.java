@@ -7,6 +7,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
+ * Абстракция инструмента для чтения последовательности
+ * {@link Attribute} из {@link AttributeSource}.
+ *
  * @author Maxim Tereshchenko
  */
 public interface Reader<T, R> {

@@ -1,5 +1,6 @@
 package ru.standard1c.reader;
 
+import ru.standard1c.exception.NoEndOfSection;
 import ru.standard1c.exception.NoStartOfSection;
 import ru.standard1c.exception.UnknownAttribute;
 import ru.standard1c.reader.source.Attribute;
@@ -12,6 +13,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
+ * Реализация по умолчанию {@link Reader}.
+ *
  * @author Maxim Tereshchenko
  */
 public class DefaultReader<T, R> implements Reader<T, R> {
@@ -21,7 +24,6 @@ public class DefaultReader<T, R> implements Reader<T, R> {
     private final Function<String, T> accumulatorFunction;
     private final Map<String, AttributeConsumer<T>> attributeConsumerMap;
     private final AttributeConsumer<T> anyAttributeConsumer;
-    private final EndOfSectionAttributeConsumer<T> endOfSectionAttributeConsumer;
     private final Function<T, R> finisher;
 
     private <E> DefaultReader(
@@ -39,8 +41,6 @@ public class DefaultReader<T, R> implements Reader<T, R> {
         this.attributeConsumerMap = attributeConsumerMap;
         this.anyAttributeConsumer = anyAttributeConsumer;
         this.finisher = finisher;
-        endOfSectionAttributeConsumer = new EndOfSectionAttributeConsumer<>(endOfSectionAttributeKey);
-        attributeConsumerMap.put(endOfSectionAttributeKey, endOfSectionAttributeConsumer);
     }
 
     public static <U> Reader<U, U> from(
@@ -168,19 +168,18 @@ public class DefaultReader<T, R> implements Reader<T, R> {
 
         while (attributeSource.hasNext()) {
             var current = attributeSource.next();
-            current.ifPresent(attribute -> consume(attributeSource, accumulator, attribute));
 
-            if (current.map(attribute -> attribute.hasKey(endOfSectionAttributeKey)).orElse(Boolean.FALSE)) {
-                break;
+            if (current.hasKey(endOfSectionAttributeKey)) {
+                return finisher.apply(accumulator);
             }
+
+            consume(attributeSource, current, accumulator);
         }
 
-        endOfSectionAttributeConsumer.throwSyntax1CErrorIfEndOfSectionNotReached();
-
-        return finisher.apply(accumulator);
+        throw new NoEndOfSection(endOfSectionAttributeKey);
     }
 
-    private void consume(AttributeSource attributeSource, T accumulator, Attribute attribute) {
+    private void consume(AttributeSource attributeSource, Attribute attribute, T accumulator) {
         attributeConsumerMap.getOrDefault(attribute.key(), anyAttributeConsumer)
                 .accept(attributeSource, attribute, accumulator);
     }
@@ -189,8 +188,8 @@ public class DefaultReader<T, R> implements Reader<T, R> {
         while (attributeSource.hasNext()) {
             var current = attributeSource.next();
 
-            if (current.map(attribute -> attribute.hasKey(startOfSectionAttributeKey)).orElse(Boolean.FALSE)) {
-                return current.get();
+            if (current.hasKey(startOfSectionAttributeKey)) {
+                return current;
             }
         }
 

@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import ru.standard1c.util.AlternativeRepresentation;
 
 /**
+ * Вид платежа.
+ *
  * @author Maxim Tereshchenko
  */
 @RequiredArgsConstructor

@@ -17,6 +17,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
+ * Обертка над {@link Reader}, заранее настроенная для чтения
+ * формата "Стандарт обмена с системами «Клиент банка»".
+ *
  * @author Maxim Tereshchenko
  */
 public class ClientBankExchangeReader
@@ -226,7 +229,7 @@ public class ClientBankExchangeReader
                 .onAttribute("ПолучательКорсчет", Document.DocumentBuilder::receiverCorrespondentAccount)
                 .onAttribute("ВидПлатежа", PaymentType::from, Document.DocumentBuilder::paymentType)
                 .onAttribute("КодНазПлатежа", Integer::parseInt, Document.DocumentBuilder::paymentPurposeCode)
-                .onAttribute("ВидОплаты", Document.DocumentBuilder::transactionType)
+                .onAttribute("ВидОплаты", Document.DocumentBuilder::operationType)
                 .onAttribute("Код", Document.DocumentBuilder::code)
                 .onAttribute("НазначениеПлатежа", Document.DocumentBuilder::paymentPurpose)
                 .onAttribute("НазначениеПлатежа1", Document.DocumentBuilder::paymentPurpose1)

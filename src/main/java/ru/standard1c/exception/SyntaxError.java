@@ -3,9 +3,9 @@ package ru.standard1c.exception;
 /**
  * @author Maxim Tereshchenko
  */
-public class SyntaxError extends RuntimeException {
+public abstract class SyntaxError extends RuntimeException {
 
-    public SyntaxError(String message) {
+    protected SyntaxError(String message) {
         super(message);
     }
 }

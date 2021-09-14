@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import ru.standard1c.util.AlternativeRepresentation;
 
 /**
+ * Кодировка файла.
+ *
  * @author Maxim Tereshchenko
  */
 @RequiredArgsConstructor

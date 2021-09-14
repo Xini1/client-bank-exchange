@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import ru.standard1c.reader.source.Attribute;
 import ru.standard1c.reader.source.AttributeSource;
 
-import java.util.Optional;
-
 /**
  * @author Maxim Tereshchenko
  */
@@ -17,14 +15,14 @@ class IncludingCurrentAttributeSource implements AttributeSource {
     private boolean isAdvanced = false;
 
     @Override
-    public Optional<Attribute> next() {
+    public Attribute next() {
         if (isAdvanced) {
             return original.next();
         }
 
         isAdvanced = true;
 
-        return Optional.ofNullable(previous);
+        return previous;
     }
 
     @Override
