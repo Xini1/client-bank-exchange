@@ -9,9 +9,9 @@ import ru.standard1c.format.Document;
 import ru.standard1c.format.DocumentType;
 import ru.standard1c.format.Encoding;
 import ru.standard1c.format.PaymentType;
-import ru.standard1c.reader.AttributeSource;
-import ru.standard1c.reader.Reader;
-import ru.standard1c.reader.ScannerAttributeSource;
+import ru.standard1c.reader.ClientBankExchangeReader;
+import ru.standard1c.reader.source.AttributeSource;
+import ru.standard1c.reader.source.ScannerAttributeSource;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -20,12 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Scanner;
-import java.util.function.Function;
 
 /**
  * @author Maxim Tereshchenko
@@ -33,114 +30,25 @@ import java.util.function.Function;
 class ReaderWithTxtSamplesTest {
 
     @Test
-    void givenFile_whenRead_thenBuildExpectedClientBankExchange() throws IOException, URISyntaxException {
-        var dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-        Function<String, LocalDate> dateMapper = date -> dateFormatter.parse(date, LocalDate::from);
-        var timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        Function<String, LocalTime> timeMapper = time -> timeFormatter.parse(time, LocalTime::from);
-        var actual = new Reader<>("1CClientBankExchange", "КонецФайла", name -> ClientBankExchange.builder())
-                .onAttribute("ВерсияФормата", Float::parseFloat, ClientBankExchange.ClientBankExchangeBuilder::formatVersion)
-                .onAttribute("Кодировка", Encoding::from, ClientBankExchange.ClientBankExchangeBuilder::encoding)
-                .onAttribute("Отправитель", ClientBankExchange.ClientBankExchangeBuilder::sender)
-                .onAttribute("Получатель", ClientBankExchange.ClientBankExchangeBuilder::receiver)
-                .onAttribute("ДатаСоздания", dateMapper, ClientBankExchange.ClientBankExchangeBuilder::creationDate)
-                .onAttribute("ВремяСоздания", timeMapper, ClientBankExchange.ClientBankExchangeBuilder::creationTime)
-                .onAttribute("ДатаНачала", dateMapper, ClientBankExchange.ClientBankExchangeBuilder::startingDate)
-                .onAttribute("ДатаКонца", dateMapper, ClientBankExchange.ClientBankExchangeBuilder::endingDate)
-                .onAttribute("РасчСчет", ClientBankExchange.ClientBankExchangeBuilder::checkingAccount)
-                .onAttribute("Документ", DocumentType::from, ClientBankExchange.ClientBankExchangeBuilder::documentType)
-                .onSection(
-                        new Reader<>("СекцияРасчСчет", "КонецРасчСчет", name -> CheckingAccountBalance.builder())
-                                .onAttribute("ДатаНачала", dateMapper, CheckingAccountBalance.CheckingAccountBalanceBuilder::startingDate)
-                                .onAttribute("ДатаКонца", dateMapper, CheckingAccountBalance.CheckingAccountBalanceBuilder::endingDate)
-                                .onAttribute("РасчСчет", CheckingAccountBalance.CheckingAccountBalanceBuilder::checkingAccount)
-                                .onAttribute("НачальныйОстаток", BigDecimal::new, CheckingAccountBalance.CheckingAccountBalanceBuilder::startingBalance)
-                                .onAttribute("ВсегоПоступило", BigDecimal::new, CheckingAccountBalance.CheckingAccountBalanceBuilder::totalReceived)
-                                .onAttribute("ВсегоСписано", BigDecimal::new, CheckingAccountBalance.CheckingAccountBalanceBuilder::totalDecommissioned)
-                                .onAttribute("КонечныйОстаток", BigDecimal::new, CheckingAccountBalance.CheckingAccountBalanceBuilder::remainingBalance),
-                        (clientBankExchangeBuilder, checkingAccountBalanceBuilder) -> clientBankExchangeBuilder.checkingAccountBalance(checkingAccountBalanceBuilder.build())
-                )
-                .onSection(
-                        new Reader<>("СекцияДокумент", "КонецДокумента", DocumentType::from, type -> Document.builder().documentType(type))
-                                .onAttribute("Номер", Integer::parseInt, Document.DocumentBuilder::number)
-                                .onAttribute("Дата", dateMapper, Document.DocumentBuilder::date)
-                                .onAttribute("Сумма", BigDecimal::new, Document.DocumentBuilder::sum)
-                                .onAttribute("КвитанцияДата", dateMapper, Document.DocumentBuilder::receiptDate)
-                                .onAttribute("КвитанцияВремя", timeMapper, Document.DocumentBuilder::receiptTime)
-                                .onAttribute("КвитанцияСодержание", Document.DocumentBuilder::receiptContent)
-                                .onAttribute("ПлательщикСчет", Document.DocumentBuilder::payerAccount)
-                                .onAttribute("ДатаСписано", dateMapper, Document.DocumentBuilder::decommissionDate)
-                                .onAttribute("Плательщик", Document.DocumentBuilder::payer)
-                                .onAttribute("ПлательщикИНН", Document.DocumentBuilder::payerInn)
-                                .onAttribute("Плательщик1", Document.DocumentBuilder::payer1)
-                                .onAttribute("Плательщик2", Document.DocumentBuilder::payer2)
-                                .onAttribute("Плательщик3", Document.DocumentBuilder::payer3)
-                                .onAttribute("Плательщик4", Document.DocumentBuilder::payer4)
-                                .onAttribute("ПлательщикРасчСчет", Document.DocumentBuilder::payerCheckingAccount)
-                                .onAttribute("ПлательщикБанк1", Document.DocumentBuilder::payerBank1)
-                                .onAttribute("ПлательщикБанк2", Document.DocumentBuilder::payerBank2)
-                                .onAttribute("ПлательщикБИК", Document.DocumentBuilder::payerBic)
-                                .onAttribute("ПлательщикКорсчет", Document.DocumentBuilder::payerCorrespondentAccount)
-                                .onAttribute("ПолучательСчет", Document.DocumentBuilder::receiverAccount)
-                                .onAttribute("ДатаПоступило", dateMapper, Document.DocumentBuilder::receivingDate)
-                                .onAttribute("Получатель", Document.DocumentBuilder::receiver)
-                                .onAttribute("ПолучательИНН", Document.DocumentBuilder::receiverInn)
-                                .onAttribute("Получатель1", Document.DocumentBuilder::receiver1)
-                                .onAttribute("Получатель2", Document.DocumentBuilder::receiver2)
-                                .onAttribute("Получатель3", Document.DocumentBuilder::receiver3)
-                                .onAttribute("Получатель4", Document.DocumentBuilder::receiver4)
-                                .onAttribute("ПолучательРасчСчет", Document.DocumentBuilder::receiverCheckingAccount)
-                                .onAttribute("ПолучательБанк1", Document.DocumentBuilder::receiverBank1)
-                                .onAttribute("ПолучательБанк2", Document.DocumentBuilder::receiverBank2)
-                                .onAttribute("ПолучательБИК", Document.DocumentBuilder::receiverBic)
-                                .onAttribute("ПолучательКорсчет", Document.DocumentBuilder::receiverCorrespondentAccount)
-                                .onAttribute("ВидПлатежа", PaymentType::from, Document.DocumentBuilder::paymentType)
-                                .onAttribute("КодНазПлатежа", Integer::parseInt, Document.DocumentBuilder::paymentPurposeCode)
-                                .onAttribute("ВидОплаты", Document.DocumentBuilder::transactionType)
-                                .onAttribute("Код", Document.DocumentBuilder::code)
-                                .onAttribute("НазначениеПлатежа", Document.DocumentBuilder::paymentPurpose)
-                                .onAttribute("НазначениеПлатежа1", Document.DocumentBuilder::paymentPurpose1)
-                                .onAttribute("НазначениеПлатежа2", Document.DocumentBuilder::paymentPurpose2)
-                                .onAttribute("НазначениеПлатежа3", Document.DocumentBuilder::paymentPurpose3)
-                                .onAttribute("НазначениеПлатежа4", Document.DocumentBuilder::paymentPurpose4)
-                                .onAttribute("НазначениеПлатежа5", Document.DocumentBuilder::paymentPurpose5)
-                                .onAttribute("НазначениеПлатежа6", Document.DocumentBuilder::paymentPurpose6)
-                                .onAttribute("СтатусСоставителя", Document.DocumentBuilder::compilerStatus)
-                                .onAttribute("ПлательщикКПП", Document.DocumentBuilder::payerKpp)
-                                .onAttribute("ПолучательКПП", Document.DocumentBuilder::receiverKpp)
-                                .onAttribute("ПоказательКБК", Document.DocumentBuilder::cbcIndicator)
-                                .onAttribute("ОКАТО", Document.DocumentBuilder::oktmo)
-                                .onAttribute("ПоказательОснования", Document.DocumentBuilder::basisIndicator)
-                                .onAttribute("ПоказательПериода", Document.DocumentBuilder::periodIndicator)
-                                .onAttribute("ПоказательНомера", Document.DocumentBuilder::numberIndicator)
-                                .onAttribute("ПоказательДаты", dateMapper, Document.DocumentBuilder::dateIndicator)
-                                .onAttribute("ПоказательТипа", Document.DocumentBuilder::typeIndicator)
-                                .onAttribute("Очередность", Integer::parseInt, Document.DocumentBuilder::priority)
-                                .onAttribute("СрокАкцепта", Integer::valueOf, Document.DocumentBuilder::acceptanceTerm)
-                                .onAttribute("ВидАккредитива", Document.DocumentBuilder::letterOfCreditType)
-                                .onAttribute("СрокПлатежа", dateMapper, Document.DocumentBuilder::paymentTerm)
-                                .onAttribute("УсловиеОплаты1", Document.DocumentBuilder::paymentCondition1)
-                                .onAttribute("УсловиеОплаты2", Document.DocumentBuilder::paymentCondition2)
-                                .onAttribute("УсловиеОплаты3", Document.DocumentBuilder::paymentCondition3)
-                                .onAttribute("ПлатежПоПредст", Document.DocumentBuilder::paymentOnPresentation)
-                                .onAttribute("ДополнУсловия", Document.DocumentBuilder::additionalConditions)
-                                .onAttribute("НомерСчетаПоставщика", Document.DocumentBuilder::supplierAccountNumber)
-                                .onAttribute("ДатаОтсылкиДок", dateMapper, Document.DocumentBuilder::documentDispatchDate),
-                        (clientBankExchangeBuilder, documentBuilder) -> clientBankExchangeBuilder.document(documentBuilder.build())
-                )
-                .read(attributeSourceFromFile())
-                .build();
+    void givenSample_whenRead_thenBuildExpectedClientBankExchange() throws IOException, URISyntaxException {
+        assertThat(new ClientBankExchangeReader().read(attributeSourceFromFile())).isEqualTo(expected());
+    }
 
-        var expected = ClientBankExchange.builder()
+    private ClientBankExchange expected() {
+        var date = LocalDate.of(2020, 1, 1);
+        var time = LocalTime.of(10, 0, 0);
+        var amount = new BigDecimal("10.10");
+
+        return ClientBankExchange.builder()
                 .formatVersion(1.03f)
                 .encoding(Encoding.WINDOWS)
-                .sender("Бухгалтерия предприятия, редакция 3.0")
-                .receiver("")
-                .creationDate(LocalDate.of(2015, 12, 9))
-                .creationTime(LocalTime.of(10, 33, 20))
-                .startingDate(LocalDate.of(2015, 12, 9))
-                .endingDate(LocalDate.of(2015, 12, 9))
-                .checkingAccount("40702810300180001774")
+                .sender("Отправитель")
+                .receiver("Получатель")
+                .creationDate(date)
+                .creationTime(time)
+                .startingDate(date)
+                .endingDate(date)
+                .checkingAccount("12345678901234567890")
                 .documentTypeList(
                         List.of(
                                 DocumentType.PAYMENT_ORDER,
@@ -148,56 +56,100 @@ class ReaderWithTxtSamplesTest {
                         )
                 )
                 .checkingAccountBalanceList(
-                        Collections.singletonList(
-                                CheckingAccountBalance.builder()
-                                        .startingDate(LocalDate.of(2020, 1, 1))
-                                        .endingDate(LocalDate.of(2020, 1, 1))
-                                        .checkingAccount("123456789")
-                                        .startingBalance(new BigDecimal("100"))
-                                        .totalReceived(new BigDecimal("100.02"))
-                                        .totalDecommissioned(new BigDecimal("100.00"))
-                                        .remainingBalance(new BigDecimal("100.99"))
-                                        .build()
+                        List.of(
+                                checkingAccountBalance(date, amount, "12345678901234567890"),
+                                checkingAccountBalance(date, amount, "12345678901234567891")
                         )
                 )
                 .documentList(
-                        Collections.singletonList(
-                                Document.builder()
-                                        .documentType(DocumentType.PAYMENT_ORDER)
-                                        .number(105)
-                                        .date(LocalDate.of(2015, 12, 9))
-                                        .sum(new BigDecimal("12354.00"))
-                                        .payerAccount("40702810300180001774")
-                                        .payer("ИНН 7719617469 ОАО Крокус")
-                                        .payerInn("7719617469")
-                                        .payer1("ОАО Крокус")
-                                        .payerCheckingAccount("40702810300180001774")
-                                        .payerBank1("АО ОТП БАНК")
-                                        .payerBank2("Г. МОСКВА")
-                                        .payerBic("044525311")
-                                        .payerCorrespondentAccount("30101810000000000311")
-                                        .receiverAccount("40702810123111111114")
-                                        .receiver("ИНН 7701325469 ОАО Прогресс Парк")
-                                        .receiverInn("7701325469")
-                                        .receiver1("ОАО Прогресс Парк")
-                                        .receiverCheckingAccount("40702810123111111114")
-                                        .receiverBank1("ОАО БАНК ПЕТРОКОММЕРЦ")
-                                        .receiverBank2("Г. МОСКВА")
-                                        .receiverBic("044525352")
-                                        .receiverCorrespondentAccount("30101810700000000352")
-                                        .paymentType(PaymentType.POST)
-                                        .paymentPurposeCode(1)
-                                        .transactionType("01")
-                                        .payerKpp("771901001")
-                                        .priority(5)
-                                        .paymentPurpose("Оплата по договору. Сумма 12354-00 без налога (НДС)")
-                                        .paymentPurpose1("Оплата по договору. Сумма 12354-00 без налога (НДС)")
-                                        .build()
+                        List.of(
+                                document(date, time, amount, DocumentType.PAYMENT_ORDER),
+                                document(date, time, amount, DocumentType.PAYMENT_CLAIM)
                         )
                 )
                 .build();
+    }
 
-        assertThat(actual).isEqualTo(expected);
+    private Document document(LocalDate date, LocalTime time, BigDecimal amount, DocumentType documentType) {
+        return Document.builder()
+                .documentType(documentType)
+                .number(1)
+                .date(date)
+                .sum(amount)
+                .receiptDate(date)
+                .receiptTime(time)
+                .receiptContent("КвитанцияСодержание")
+                .payerAccount("12345678901234567890")
+                .decommissionDate(date)
+                .payer("Плательщик")
+                .payerInn("1234567890")
+                .payer1("Плательщик1")
+                .payer2("Плательщик2")
+                .payer3("Плательщик3")
+                .payer4("Плательщик4")
+                .payerCheckingAccount("12345678901234567890")
+                .payerBank1("ПлательщикБанк1")
+                .payerBank2("ПлательщикБанк2")
+                .payerBic("123456789")
+                .payerCorrespondentAccount("12345678901234567890")
+                .receiverAccount("12345678901234567890")
+                .receivingDate(date)
+                .receiver("Получатель")
+                .receiverInn("1234567890")
+                .receiver1("Получатель1")
+                .receiver2("Получатель2")
+                .receiver3("Получатель3")
+                .receiver4("Получатель4")
+                .receiverCheckingAccount("12345678901234567890")
+                .receiverBank1("ПолучательБанк1")
+                .receiverBank2("ПолучательБанк2")
+                .receiverBic("123456789")
+                .receiverCorrespondentAccount("12345678901234567890")
+                .paymentType(PaymentType.POST)
+                .paymentPurposeCode(1)
+                .operationType("01")
+                .code("0")
+                .paymentPurpose("НазначениеПлатежа")
+                .paymentPurpose1("НазначениеПлатежа1")
+                .paymentPurpose2("НазначениеПлатежа2")
+                .paymentPurpose3("НазначениеПлатежа3")
+                .paymentPurpose4("НазначениеПлатежа4")
+                .paymentPurpose5("НазначениеПлатежа5")
+                .paymentPurpose6("НазначениеПлатежа6")
+                .compilerStatus("СтатусСоставителя")
+                .payerKpp("123456789")
+                .receiverKpp("123456789")
+                .cbcIndicator("12345678901234567890")
+                .oktmo("12345678901")
+                .basisIndicator("12")
+                .periodIndicator("1234567890")
+                .numberIndicator("ПоказательНомера")
+                .dateIndicator(date)
+                .typeIndicator("1")
+                .priority(1)
+                .acceptanceTerm(1)
+                .letterOfCreditType("ВидАккредитива")
+                .paymentTerm(date)
+                .paymentCondition1("УсловиеОплаты1")
+                .paymentCondition2("УсловиеОплаты2")
+                .paymentCondition3("УсловиеОплаты3")
+                .paymentOnPresentation("ПлатежПоПредст")
+                .additionalConditions("ДополнУсловия")
+                .supplierAccountNumber("12345678901234567890")
+                .documentDispatchDate(date)
+                .build();
+    }
+
+    private CheckingAccountBalance checkingAccountBalance(LocalDate date, BigDecimal amount, String account) {
+        return CheckingAccountBalance.builder()
+                .startingDate(date)
+                .endingDate(date)
+                .checkingAccount(account)
+                .startingBalance(amount)
+                .totalReceived(amount)
+                .totalDecommissioned(amount)
+                .remainingBalance(amount)
+                .build();
     }
 
     private AttributeSource attributeSourceFromFile() throws URISyntaxException, IOException {
@@ -207,7 +159,7 @@ class ReaderWithTxtSamplesTest {
                                 Objects.requireNonNull(
                                                 getClass()
                                                         .getClassLoader()
-                                                        .getResource("1CClientBankExchange.txt")
+                                                        .getResource("sample.txt")
                                         )
                                         .toURI()
                         ),
