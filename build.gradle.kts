@@ -2,7 +2,7 @@ plugins {
     java
 }
 
-group = "ru.1c"
+group = "ru.standard1c"
 version = "1.0-SNAPSHOT"
 
 repositories {
