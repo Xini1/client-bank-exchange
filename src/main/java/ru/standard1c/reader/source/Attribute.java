@@ -18,14 +18,15 @@ public class Attribute {
     private final String value;
 
     public static Attribute from(String line) {
-        if (!line.contains("=")) {
-            return new Attribute(line, null);
+        if (line.isBlank()) {
+            return null;
         }
+
         var attributeArray = line.split("=");
 
         return new Attribute(
                 attributeArray[0],
-                attributeArray.length == 1 ? "" : attributeArray[1]
+                attributeArray.length == 1 || attributeArray[1].isBlank() ? null : attributeArray[1]
         );
     }
 
