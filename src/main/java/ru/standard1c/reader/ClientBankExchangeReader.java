@@ -6,31 +6,29 @@ import ru.standard1c.format.Document;
 import ru.standard1c.format.DocumentType;
 import ru.standard1c.format.Encoding;
 import ru.standard1c.format.PaymentType;
-import ru.standard1c.reader.source.Attribute;
 import ru.standard1c.reader.source.AttributeSource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
- * Обертка над {@link Reader}, заранее настроенная для чтения
+ * Обертка над {@link ConfigurableReader}, заранее настроенная для чтения
  * формата "Стандарт обмена с системами «Клиент банка»".
  *
  * @author Maxim Tereshchenko
  */
-public class ClientBankExchangeReader
-        implements Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> {
+public class ClientBankExchangeReader implements Reader<ClientBankExchange> {
 
     private static final Function<String, LocalDate> DATE_MAPPER = date ->
             DateTimeFormatter.ofPattern("dd.MM.yyyy").parse(date, LocalDate::from);
     private static final Function<String, LocalTime> TIME_MAPPER = time ->
             DateTimeFormatter.ofPattern("HH:mm:ss").parse(time, LocalTime::from);
 
-    private final Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> reader =
+    private final Reader<ClientBankExchange> reader =
             clientBankExchangeReader();
 
     @Override
@@ -44,60 +42,16 @@ public class ClientBankExchangeReader
     }
 
     @Override
-    public Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> onAttribute(
-            String key,
-            BiConsumer<ClientBankExchange.ClientBankExchangeBuilder, String> valueConsumer
-    ) {
-        return reader.onAttribute(key, valueConsumer);
-    }
-
-    @Override
-    public <E> Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> onAttribute(
-            String key,
-            Function<String, E> mapper,
-            BiConsumer<ClientBankExchange.ClientBankExchangeBuilder, E> valueConsumer
-    ) {
-        return reader.onAttribute(key, mapper, valueConsumer);
-    }
-
-    @Override
-    public <S, U> Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> onSection(
-            Reader<S, U> reader,
-            BiConsumer<ClientBankExchange.ClientBankExchangeBuilder, U> sectionConsumer
-    ) {
-        return this.reader.onSection(reader, sectionConsumer);
-    }
-
-    @Override
-    public <U> Reader<ClientBankExchange.ClientBankExchangeBuilder, U> onEndOfSection(
-            Function<ClientBankExchange.ClientBankExchangeBuilder, U> finisher
-    ) {
-        return reader.onEndOfSection(finisher);
-    }
-
-    @Override
-    public Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> onAnyOtherAttribute(
-            BiConsumer<ClientBankExchange.ClientBankExchangeBuilder, Attribute> attributeConsumer
-    ) {
-        return reader.onAnyOtherAttribute(attributeConsumer);
-    }
-
-    @Override
-    public Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> failOnUnknownAttribute() {
-        return reader.failOnUnknownAttribute();
-    }
-
-    @Override
     public ClientBankExchange read(AttributeSource attributeSource) {
         return reader.read(attributeSource);
     }
 
-    private Reader<ClientBankExchange.ClientBankExchangeBuilder, ClientBankExchange> clientBankExchangeReader() {
-        return DefaultReader.from(
-                        "1CClientBankExchange",
-                        "КонецФайла",
-                        ClientBankExchange::builder
-                )
+    private Reader<ClientBankExchange> clientBankExchangeReader() {
+        return createReader(
+                "1CClientBankExchange",
+                "КонецФайла",
+                ClientBankExchange::builder
+        )
                 .onAttribute(
                         "ВерсияФормата",
                         Float::parseFloat,
@@ -147,12 +101,12 @@ public class ClientBankExchangeReader
                 .onEndOfSection(ClientBankExchange.ClientBankExchangeBuilder::build);
     }
 
-    private Reader<CheckingAccountBalance.CheckingAccountBalanceBuilder, CheckingAccountBalance> checkingAccountBalanceReader() {
-        return DefaultReader.from(
-                        "СекцияРасчСчет",
-                        "КонецРасчСчет",
-                        CheckingAccountBalance::builder
-                )
+    private Reader<CheckingAccountBalance> checkingAccountBalanceReader() {
+        return createReader(
+                "СекцияРасчСчет",
+                "КонецРасчСчет",
+                CheckingAccountBalance::builder
+        )
                 .onAttribute(
                         "ДатаНачала",
                         DATE_MAPPER,
@@ -188,13 +142,8 @@ public class ClientBankExchangeReader
                 .onEndOfSection(CheckingAccountBalance.CheckingAccountBalanceBuilder::build);
     }
 
-    private Reader<Document.DocumentBuilder, Document> documentReader() {
-        return DefaultReader.from(
-                        "СекцияДокумент",
-                        "КонецДокумента",
-                        DocumentType::from,
-                        type -> Document.builder().documentType(type)
-                )
+    private Reader<Document> documentReader() {
+        return createDocumentReader()
                 .onAttribute("Номер", Integer::parseInt, Document.DocumentBuilder::number)
                 .onAttribute("Дата", DATE_MAPPER, Document.DocumentBuilder::date)
                 .onAttribute("Сумма", BigDecimal::new, Document.DocumentBuilder::sum)
@@ -228,7 +177,7 @@ public class ClientBankExchangeReader
                 .onAttribute("ПолучательБИК", Document.DocumentBuilder::receiverBic)
                 .onAttribute("ПолучательКорсчет", Document.DocumentBuilder::receiverCorrespondentAccount)
                 .onAttribute("ВидПлатежа", PaymentType::from, Document.DocumentBuilder::paymentType)
-                .onAttribute("КодНазПлатежа", Integer::parseInt, Document.DocumentBuilder::paymentPurposeCode)
+                .onAttribute("КодНазПлатежа", Integer::valueOf, Document.DocumentBuilder::paymentPurposeCode)
                 .onAttribute("ВидОплаты", Document.DocumentBuilder::operationType)
                 .onAttribute("Код", Document.DocumentBuilder::code)
                 .onAttribute("НазначениеПлатежа", Document.DocumentBuilder::paymentPurpose)
@@ -246,7 +195,7 @@ public class ClientBankExchangeReader
                 .onAttribute("ПоказательОснования", Document.DocumentBuilder::basisIndicator)
                 .onAttribute("ПоказательПериода", Document.DocumentBuilder::periodIndicator)
                 .onAttribute("ПоказательНомера", Document.DocumentBuilder::numberIndicator)
-                .onAttribute("ПоказательДаты", DATE_MAPPER, Document.DocumentBuilder::dateIndicator)
+                .onAttribute("ПоказательДаты", this::toDateIndicator, Document.DocumentBuilder::dateIndicator)
                 .onAttribute("ПоказательТипа", Document.DocumentBuilder::typeIndicator)
                 .onAttribute("Очередность", Integer::parseInt, Document.DocumentBuilder::priority)
                 .onAttribute("СрокАкцепта", Integer::valueOf, Document.DocumentBuilder::acceptanceTerm)
@@ -261,5 +210,38 @@ public class ClientBankExchangeReader
                 .onAttribute("ДатаОтсылкиДок", DATE_MAPPER, Document.DocumentBuilder::documentDispatchDate)
                 .failOnUnknownAttribute()
                 .onEndOfSection(Document.DocumentBuilder::build);
+    }
+
+    private <A> ConfigurableReader<A, A> createReader(
+            String startOfSectionAttributeKey,
+            String endOfSectionAttributeKey,
+            Supplier<A> accumulatorSupplier
+    ) {
+        return new FilteringEmptyValuesReader<>(
+                DefaultReader.from(
+                        startOfSectionAttributeKey,
+                        endOfSectionAttributeKey,
+                        accumulatorSupplier
+                )
+        );
+    }
+
+    private ConfigurableReader<Document.DocumentBuilder, Document.DocumentBuilder> createDocumentReader() {
+        return new FilteringEmptyValuesReader<>(
+                DefaultReader.from(
+                        "СекцияДокумент",
+                        "КонецДокумента",
+                        DocumentType::from,
+                        type -> Document.builder().documentType(type)
+                )
+        );
+    }
+
+    private LocalDate toDateIndicator(String dateString) {
+        if (dateString.equals("0")) {
+            return null;
+        }
+
+        return DATE_MAPPER.apply(dateString);
     }
 }
