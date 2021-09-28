@@ -33,28 +33,16 @@ public class FilteringEmptyValuesReader<T, R> implements ConfigurableReader<T, R
 
     @Override
     public ConfigurableReader<T, R> onAttribute(String key, BiConsumer<T, String> valueConsumer) {
-        return onAttribute(
-                key,
-                value -> {
-                    if (value.isBlank()) {
-                        return null;
-                    }
-
-                    return value;
-                },
-                valueConsumer
-        );
+        return onAttribute(key, this::filterNotBlank, valueConsumer);
     }
 
     @Override
-    public <U> ConfigurableReader<T, R> onAttribute(String key, Function<String, U> mapper, BiConsumer<T, U> valueConsumer) {
-        original.onAttribute(
-                key,
-                value -> Optional.ofNullable(value)
-                        .map(mapper)
-                        .orElse(null),
-                valueConsumer
-        );
+    public <U> ConfigurableReader<T, R> onAttribute(
+            String key,
+            Function<String, U> mapper,
+            BiConsumer<T, U> valueConsumer
+    ) {
+        original.onAttribute(key, value -> nullSafeMap(value, mapper), valueConsumer);
 
         return this;
     }
@@ -83,5 +71,19 @@ public class FilteringEmptyValuesReader<T, R> implements ConfigurableReader<T, R
         original.failOnUnknownAttribute();
 
         return this;
+    }
+
+    private String filterNotBlank(String value) {
+        if (value.isBlank()) {
+            return null;
+        }
+
+        return value;
+    }
+
+    private <U> U nullSafeMap(String value, Function<String, U> mapper) {
+        return Optional.ofNullable(value)
+                .map(mapper)
+                .orElse(null);
     }
 }

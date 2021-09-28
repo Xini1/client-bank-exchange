@@ -19,6 +19,7 @@ public class SkippingEmptyAttributeSource implements AttributeSource {
 
         var next = found;
         found = null;
+
         return next;
     }
 
