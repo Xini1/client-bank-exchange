@@ -13,7 +13,8 @@ public enum PaymentType implements AlternativeRepresentation {
 
     POST("Почтой"),
     TELEGRAPH("Телеграфом"),
-    URGENTLY("Срочно");
+    URGENTLY("Срочно"),
+    DIGITAL("Электронно");
 
     private final String alternativeRepresentation;
 
