@@ -9,10 +9,13 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
+ * Декоратор {@link Reader}, которая дополняет обработчики атрибутов
+ * при конфигурации в проверки на null.
+ *
  * @author Maxim Tereshchenko
  */
 @RequiredArgsConstructor
-public class FilteringEmptyValuesReader<T, R> implements ConfigurableReader<T, R> {
+public class FilteringNullValuesReader<T, R> implements ConfigurableReader<T, R> {
 
     private final ConfigurableReader<T, R> original;
 
@@ -33,7 +36,9 @@ public class FilteringEmptyValuesReader<T, R> implements ConfigurableReader<T, R
 
     @Override
     public ConfigurableReader<T, R> onAttribute(String key, BiConsumer<T, String> valueConsumer) {
-        return onAttribute(key, this::filterNotBlank, valueConsumer);
+        original.onAttribute(key, valueConsumer);
+
+        return this;
     }
 
     @Override
@@ -56,7 +61,7 @@ public class FilteringEmptyValuesReader<T, R> implements ConfigurableReader<T, R
 
     @Override
     public <U> ConfigurableReader<T, U> onEndOfSection(Function<T, U> finisher) {
-        return new FilteringEmptyValuesReader<>(original.onEndOfSection(finisher));
+        return new FilteringNullValuesReader<>(original.onEndOfSection(finisher));
     }
 
     @Override
@@ -71,14 +76,6 @@ public class FilteringEmptyValuesReader<T, R> implements ConfigurableReader<T, R
         original.failOnUnknownAttribute();
 
         return this;
-    }
-
-    private String filterNotBlank(String value) {
-        if (value.isBlank()) {
-            return null;
-        }
-
-        return value;
     }
 
     private <U> U nullSafeMap(String value, Function<String, U> mapper) {
