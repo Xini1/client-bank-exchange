@@ -205,7 +205,6 @@ class ReaderWithTxtSamplesTest {
                 .paymentType(PaymentType.POST)
                 .paymentPurposeCode(1)
                 .operationType("01")
-                .code("0")
                 .paymentPurpose("НазначениеПлатежа")
                 .paymentPurpose1("НазначениеПлатежа1")
                 .paymentPurpose2("НазначениеПлатежа2")
@@ -298,13 +297,9 @@ class ReaderWithTxtSamplesTest {
                 .paymentType(PaymentType.DIGITAL)
                 .operationType("01")
                 .priority(1)
-                .code("0")
                 .compilerStatus("08")
                 .cbcIndicator("18911301050016000130")
                 .oktmo("54701000")
-                .basisIndicator("0")
-                .periodIndicator("0")
-                .numberIndicator("0")
                 .paymentPurpose("Расчет по договору N 0320 от 21.06.2021 за проведение экспертизы. Не облагается НДС")
                 .build();
     }
@@ -337,7 +332,6 @@ class ReaderWithTxtSamplesTest {
                 .paymentType(PaymentType.DIGITAL)
                 .operationType("01")
                 .priority(5)
-                .code("0")
                 .paymentPurpose("За Татарстан. Расчет по договору N б/н от 01.09.2008 за аренду. Не облагается НДС")
                 .build();
     }
@@ -372,10 +366,8 @@ class ReaderWithTxtSamplesTest {
                 .oktmo("07701000")
                 .basisIndicator("ТП")
                 .periodIndicator("МС.08.2021")
-                .numberIndicator("0")
                 .dateIndicator(LocalDate.of(2021, 8, 20))
                 .priority(3)
-                .code("0")
                 .paymentPurpose("НДФЛ Август 2021 Не облагается НДС")
                 .build();
     }
@@ -410,10 +402,8 @@ class ReaderWithTxtSamplesTest {
                 .oktmo("25736000")
                 .basisIndicator("ТП")
                 .periodIndicator("МС.08.2021")
-                .numberIndicator("0")
                 .dateIndicator(LocalDate.of(2021, 8, 20))
                 .priority(3)
-                .code("0")
                 .paymentPurpose("НДФЛ за август 2021 г. Не облагается НДС")
                 .build();
     }
@@ -448,10 +438,8 @@ class ReaderWithTxtSamplesTest {
                 .oktmo("75742000")
                 .basisIndicator("ТП")
                 .periodIndicator("МС.08.2021")
-                .numberIndicator("0")
                 .dateIndicator(LocalDate.of(2021, 8, 20))
                 .priority(3)
-                .code("0")
                 .paymentPurpose("НДФЛ за август 2021 года. Не облагается НДС")
                 .build();
     }
@@ -486,9 +474,7 @@ class ReaderWithTxtSamplesTest {
                 .oktmo("25736000")
                 .basisIndicator("ТП")
                 .periodIndicator("МС.08.2021")
-                .numberIndicator("0")
                 .priority(5)
-                .code("0")
                 .paymentPurpose("За рассмотрение заявления о выдаче судебного приказа. Не облагается НДС")
                 .build();
     }
@@ -523,10 +509,8 @@ class ReaderWithTxtSamplesTest {
                 .oktmo("40911000")
                 .basisIndicator("ТП")
                 .periodIndicator("МС.07.2021")
-                .numberIndicator("0")
                 .dateIndicator(LocalDate.of(2021, 8, 20))
                 .priority(5)
-                .code("0")
                 .paymentPurpose("Страховые взносы на обязательное социальное страхование на случай временной нетрудоспособности и в связи с материнством. Не облагается НДС")
                 .build();
     }
