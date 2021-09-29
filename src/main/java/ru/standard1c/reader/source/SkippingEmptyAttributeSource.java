@@ -3,6 +3,9 @@ package ru.standard1c.reader.source;
 import lombok.RequiredArgsConstructor;
 
 /**
+ * Декоратор {@link AttributeSource}, который пропускает null атрибуты
+ * (при присутствии в файле пустых строк между строками с атрибутами).
+ *
  * @author Maxim Tereshchenko
  */
 @RequiredArgsConstructor

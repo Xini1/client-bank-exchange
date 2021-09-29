@@ -221,7 +221,7 @@ public class ClientBankExchangeReader implements Reader<ClientBankExchange> {
             String endOfSectionAttributeKey,
             Supplier<A> accumulatorSupplier
     ) {
-        return new FilteringEmptyValuesReader<>(
+        return new FilteringNullValuesReader<>(
                 DefaultReader.from(
                         startOfSectionAttributeKey,
                         endOfSectionAttributeKey,
@@ -231,7 +231,7 @@ public class ClientBankExchangeReader implements Reader<ClientBankExchange> {
     }
 
     private ConfigurableReader<Document.DocumentBuilder, Document.DocumentBuilder> createDocumentReader() {
-        return new FilteringEmptyValuesReader<>(
+        return new FilteringNullValuesReader<>(
                 DefaultReader.from(
                         "СекцияДокумент",
                         "КонецДокумента",

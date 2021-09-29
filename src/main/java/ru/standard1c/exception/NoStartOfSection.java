@@ -1,6 +1,8 @@
 package ru.standard1c.exception;
 
 /**
+ * Ошибка, в случае отсутствия открывающего секцию атрибута.
+ *
  * @author Maxim Tereshchenko
  */
 public class NoStartOfSection extends SyntaxError {

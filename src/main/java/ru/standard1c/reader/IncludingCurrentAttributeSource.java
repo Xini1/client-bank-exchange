@@ -5,6 +5,9 @@ import ru.standard1c.reader.source.Attribute;
 import ru.standard1c.reader.source.AttributeSource;
 
 /**
+ * Используется для сохранения последнего прочитанного атрибута
+ * в {@link DefaultReader}.
+ *
  * @author Maxim Tereshchenko
  */
 @RequiredArgsConstructor
