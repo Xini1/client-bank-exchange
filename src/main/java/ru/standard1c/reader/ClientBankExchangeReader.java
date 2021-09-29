@@ -179,7 +179,7 @@ public class ClientBankExchangeReader implements Reader<ClientBankExchange> {
                 .onAttribute("ВидПлатежа", PaymentType::from, Document.DocumentBuilder::paymentType)
                 .onAttribute("КодНазПлатежа", Integer::valueOf, Document.DocumentBuilder::paymentPurposeCode)
                 .onAttribute("ВидОплаты", Document.DocumentBuilder::operationType)
-                .onAttribute("Код", Document.DocumentBuilder::code)
+                .onAttribute("Код", this::filterZeroValue, Document.DocumentBuilder::code)
                 .onAttribute("НазначениеПлатежа", Document.DocumentBuilder::paymentPurpose)
                 .onAttribute("НазначениеПлатежа1", Document.DocumentBuilder::paymentPurpose1)
                 .onAttribute("НазначениеПлатежа2", Document.DocumentBuilder::paymentPurpose2)
@@ -188,14 +188,18 @@ public class ClientBankExchangeReader implements Reader<ClientBankExchange> {
                 .onAttribute("НазначениеПлатежа5", Document.DocumentBuilder::paymentPurpose5)
                 .onAttribute("НазначениеПлатежа6", Document.DocumentBuilder::paymentPurpose6)
                 .onAttribute("СтатусСоставителя", Document.DocumentBuilder::compilerStatus)
-                .onAttribute("ПлательщикКПП", Document.DocumentBuilder::payerKpp)
-                .onAttribute("ПолучательКПП", Document.DocumentBuilder::receiverKpp)
+                .onAttribute("ПлательщикКПП", this::filterZeroValue, Document.DocumentBuilder::payerKpp)
+                .onAttribute("ПолучательКПП", this::filterZeroValue, Document.DocumentBuilder::receiverKpp)
                 .onAttribute("ПоказательКБК", Document.DocumentBuilder::cbcIndicator)
-                .onAttribute("ОКАТО", Document.DocumentBuilder::oktmo)
-                .onAttribute("ПоказательОснования", Document.DocumentBuilder::basisIndicator)
-                .onAttribute("ПоказательПериода", Document.DocumentBuilder::periodIndicator)
-                .onAttribute("ПоказательНомера", Document.DocumentBuilder::numberIndicator)
-                .onAttribute("ПоказательДаты", this::toDateIndicator, Document.DocumentBuilder::dateIndicator)
+                .onAttribute("ОКАТО", this::filterZeroValue, Document.DocumentBuilder::oktmo)
+                .onAttribute("ПоказательОснования", this::filterZeroValue, Document.DocumentBuilder::basisIndicator)
+                .onAttribute("ПоказательПериода", this::filterZeroValue, Document.DocumentBuilder::periodIndicator)
+                .onAttribute("ПоказательНомера", this::filterZeroValue, Document.DocumentBuilder::numberIndicator)
+                .onAttribute(
+                        "ПоказательДаты",
+                        value -> filterZeroValue(value, DATE_MAPPER),
+                        Document.DocumentBuilder::dateIndicator
+                )
                 .onAttribute("ПоказательТипа", Document.DocumentBuilder::typeIndicator)
                 .onAttribute("Очередность", Integer::parseInt, Document.DocumentBuilder::priority)
                 .onAttribute("СрокАкцепта", Integer::valueOf, Document.DocumentBuilder::acceptanceTerm)
@@ -237,11 +241,15 @@ public class ClientBankExchangeReader implements Reader<ClientBankExchange> {
         );
     }
 
-    private LocalDate toDateIndicator(String dateString) {
-        if (dateString.equals("0")) {
+    private <T> T filterZeroValue(String value, Function<String, T> mapper) {
+        if (value.equals("0")) {
             return null;
         }
 
-        return DATE_MAPPER.apply(dateString);
+        return mapper.apply(value);
+    }
+
+    private String filterZeroValue(String value) {
+        return filterZeroValue(value, Function.identity());
     }
 }
