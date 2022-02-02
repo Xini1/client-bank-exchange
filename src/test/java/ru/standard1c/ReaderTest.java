@@ -9,7 +9,7 @@ import ru.standard1c.exception.NoStartOfSection;
 import ru.standard1c.exception.UnknownAttribute;
 import ru.standard1c.reader.source.AttributeSource;
 import ru.standard1c.reader.DefaultReader;
-import ru.standard1c.reader.Reader;
+import ru.standard1c.reader.ConfigurableReader;
 import ru.standard1c.reader.source.ScannerAttributeSource;
 
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import java.util.Scanner;
  */
 class ReaderTest {
 
-    private final Reader<TestCaptor, TestCaptor> reader = DefaultReader.from(
+    private final ConfigurableReader<TestCaptor, TestCaptor> reader = DefaultReader.from(
             "OpenSection",
             "CloseSection",
             TestCaptor::new
@@ -44,9 +44,9 @@ class ReaderTest {
     }
 
     @Test
-    void givenSectionWithEmptyName_thenNameIsEmpty() {
+    void givenSectionWithEmptyName_thenNameIsNull() {
         assertThat(reader.read(attributeSource("OpenSection=", "CloseSection")))
-                .isEqualTo(new TestCaptor(""));
+                .isEqualTo(new TestCaptor(null));
     }
 
     @Test

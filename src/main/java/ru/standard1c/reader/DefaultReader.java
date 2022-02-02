@@ -13,11 +13,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Реализация по умолчанию {@link Reader}.
+ * Реализация по умолчанию {@link ConfigurableReader}.
  *
  * @author Maxim Tereshchenko
  */
-public class DefaultReader<T, R> implements Reader<T, R> {
+public class DefaultReader<T, R> implements ConfigurableReader<T, R> {
 
     private final String startOfSectionAttributeKey;
     private final String endOfSectionAttributeKey;
@@ -43,7 +43,7 @@ public class DefaultReader<T, R> implements Reader<T, R> {
         this.finisher = finisher;
     }
 
-    public static <U> Reader<U, U> from(
+    public static <U> ConfigurableReader<U, U> from(
             String startOfSectionAttributeKey,
             String endOfSectionAttributeKey,
             Supplier<U> accumulatorSupplier
@@ -56,7 +56,7 @@ public class DefaultReader<T, R> implements Reader<T, R> {
         );
     }
 
-    public static <U> Reader<U, U> from(
+    public static <U> ConfigurableReader<U, U> from(
             String startOfSectionAttributeKey,
             String endOfSectionAttributeKey,
             Function<String, U> accumulatorFunction
@@ -69,7 +69,7 @@ public class DefaultReader<T, R> implements Reader<T, R> {
         );
     }
 
-    public static <U, E> Reader<U, U> from(
+    public static <U, E> ConfigurableReader<U, U> from(
             String startOfSectionAttributeKey,
             String endOfSectionAttributeKey,
             Function<String, E> mapper,
@@ -97,72 +97,6 @@ public class DefaultReader<T, R> implements Reader<T, R> {
     }
 
     @Override
-    public Reader<T, R> onAttribute(String key, BiConsumer<T, String> valueConsumer) {
-        return onAttribute(key, Function.identity(), valueConsumer);
-    }
-
-    @Override
-    public <E> Reader<T, R> onAttribute(String key, Function<String, E> mapper, BiConsumer<T, E> valueConsumer) {
-        attributeConsumerMap.put(
-                key,
-                (attributeSource, attribute, accumulator) -> valueConsumer.accept(
-                        accumulator,
-                        mapper.apply(attribute.value())
-                )
-        );
-
-        return this;
-    }
-
-    @Override
-    public <S, U> Reader<T, R> onSection(Reader<S, U> reader, BiConsumer<T, U> sectionConsumer) {
-        attributeConsumerMap.put(
-                reader.startOfSectionAttributeKey(),
-                (attributeSource, attribute, accumulator) -> sectionConsumer.accept(
-                        accumulator,
-                        reader.read(new IncludingCurrentAttributeSource(attributeSource, attribute))
-                )
-        );
-
-        return this;
-    }
-
-    @Override
-    public <U> Reader<T, U> onEndOfSection(Function<T, U> finisher) {
-        return new DefaultReader<>(
-                startOfSectionAttributeKey(),
-                endOfSectionAttributeKey(),
-                Function.identity(),
-                accumulatorFunction,
-                attributeConsumerMap,
-                anyAttributeConsumer,
-                finisher
-        );
-    }
-
-    @Override
-    public Reader<T, R> onAnyOtherAttribute(BiConsumer<T, Attribute> attributeConsumer) {
-        return new DefaultReader<>(
-                startOfSectionAttributeKey(),
-                endOfSectionAttributeKey(),
-                Function.identity(),
-                accumulatorFunction,
-                attributeConsumerMap,
-                (attributeSource, attribute, accumulator) -> attributeConsumer.accept(accumulator, attribute),
-                finisher
-        );
-    }
-
-    @Override
-    public Reader<T, R> failOnUnknownAttribute() {
-        return onAnyOtherAttribute(
-                (accumulator, attribute) -> {
-                    throw new UnknownAttribute(attribute);
-                }
-        );
-    }
-
-    @Override
     public R read(AttributeSource attributeSource) {
         var accumulator = accumulatorFunction.apply(openSectionAttribute(attributeSource).value());
 
@@ -177,6 +111,76 @@ public class DefaultReader<T, R> implements Reader<T, R> {
         }
 
         throw new NoEndOfSection(endOfSectionAttributeKey);
+    }
+
+    @Override
+    public ConfigurableReader<T, R> onAttribute(String key, BiConsumer<T, String> valueConsumer) {
+        return onAttribute(key, Function.identity(), valueConsumer);
+    }
+
+    @Override
+    public <U> ConfigurableReader<T, R> onAttribute(
+            String key,
+            Function<String, U> mapper,
+            BiConsumer<T, U> valueConsumer
+    ) {
+        attributeConsumerMap.put(
+                key,
+                (attributeSource, attribute, accumulator) -> valueConsumer.accept(
+                        accumulator,
+                        mapper.apply(attribute.value())
+                )
+        );
+
+        return this;
+    }
+
+    @Override
+    public <U> ConfigurableReader<T, R> onSection(Reader<U> reader, BiConsumer<T, U> sectionConsumer) {
+        attributeConsumerMap.put(
+                reader.startOfSectionAttributeKey(),
+                (attributeSource, attribute, accumulator) -> sectionConsumer.accept(
+                        accumulator,
+                        reader.read(new IncludingCurrentAttributeSource(attributeSource, attribute))
+                )
+        );
+
+        return this;
+    }
+
+    @Override
+    public <U> ConfigurableReader<T, U> onEndOfSection(Function<T, U> finisher) {
+        return new DefaultReader<>(
+                startOfSectionAttributeKey(),
+                endOfSectionAttributeKey(),
+                Function.identity(),
+                accumulatorFunction,
+                attributeConsumerMap,
+                anyAttributeConsumer,
+                finisher
+        );
+    }
+
+    @Override
+    public ConfigurableReader<T, R> onAnyOtherAttribute(BiConsumer<T, Attribute> attributeConsumer) {
+        return new DefaultReader<>(
+                startOfSectionAttributeKey(),
+                endOfSectionAttributeKey(),
+                Function.identity(),
+                accumulatorFunction,
+                attributeConsumerMap,
+                (attributeSource, attribute, accumulator) -> attributeConsumer.accept(accumulator, attribute),
+                finisher
+        );
+    }
+
+    @Override
+    public ConfigurableReader<T, R> failOnUnknownAttribute() {
+        return onAnyOtherAttribute(
+                (accumulator, attribute) -> {
+                    throw new UnknownAttribute(attribute);
+                }
+        );
     }
 
     private void consume(AttributeSource attributeSource, Attribute attribute, T accumulator) {

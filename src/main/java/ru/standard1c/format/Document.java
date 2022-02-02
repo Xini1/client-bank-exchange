@@ -189,7 +189,7 @@ public class Document {
     /**
      * Назначение платежа кодовое.
      */
-    int paymentPurposeCode;
+    Integer paymentPurposeCode;
 
     /**
      * Вид оплаты (вид операции).
